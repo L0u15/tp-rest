@@ -21,7 +21,9 @@ from todo import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    url(r'^todos/$',views.TodoList.as_view())
+    url(r'^todos/$',views.TodoList.as_view()),
+    path('todos/<int:pk>/', views.TodoDetail.as_view())
+    #url(r'todos/(?P<pk>[0-9]+)/$',views.TodoDetail.as_view())
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)
