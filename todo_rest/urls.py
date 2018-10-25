@@ -15,15 +15,30 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from django.conf.urls import url
+from django.conf.urls import url, include
+
 from rest_framework.urlpatterns import format_suffix_patterns
+
 from todo import views
 
-urlpatterns = [
-    path('admin/', admin.site.urls),
-    url(r'^todos/$',views.TodoList.as_view()),
-    path('todos/<int:pk>/', views.TodoDetail.as_view())
-    #url(r'todos/(?P<pk>[0-9]+)/$',views.TodoDetail.as_view())
-]
+urlpatterns = format_suffix_patterns([
+    path('admin/',
+         admin.site.urls),
+    path('',
+         views.api_root),
+    path('todos/',
+         views.TodoList.as_view(),
+         name='todo-list'),
+    path('todo/<int:pk>/',
+         views.TodoDetail.as_view(),
+         name='todo-detail'),
+     path('users/',
+          views.UserList.as_view(),
+          name='user-list'),
+    path('users/<int:pk>/',
+         views.UserDetail.as_view(),
+         name='user-detail'),
+    path('api-auth/', include('rest_framework.urls')),
+])
 
-urlpatterns = format_suffix_patterns(urlpatterns)
+#urlpatterns = format_suffix_patterns(urlpatterns)

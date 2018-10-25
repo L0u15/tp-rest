@@ -1,61 +1,51 @@
 from django.shortcuts import render
 from django.http import Http404
+from django.contrib.auth.models import User, Group
 
-from rest_framework.views import APIView
+from rest_framework import generics
+from rest_framework import viewsets
 from rest_framework.response import Response
-from rest_framework.views import status
+from rest_framework.reverse import reverse
+from rest_framework.decorators import api_view
+from rest_framework import permissions
 
 from todo.models import Todo
-from todo.serializers import TodoSerializer
+from todo.serializers import TodoSerializer, UserSerializer, GroupSerializer
+from todo.permissions import IsOwnerOrReadOnly
 
 
 # Create your views here.
-class TodoList(APIView):
+@api_view(['GET'])
+def api_root(request, format=None):
+    return Response({
+        'users': reverse('user-list', request=request, format=format),
+        'todos': reverse('todo-list', request=request, format=format)
+    })
+class UserList(generics.ListCreateAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+
+
+class UserDetail(generics.RetrieveUpdateDestroyAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+
+class GroupViewSet(generics.RetrieveUpdateDestroyAPIView):
     """
-    List all snippets, or create a new snippet
+    API endpoint that allows groups to be viewed or edited.
     """
-    def get(self,request, format=None):
-        todos=Todo.objects.all()
-        serializer = TodoSerializer(todos, many=True)
-        return Response(serializer.data)
+    queryset = Group.objects.all()
+    serializer_class = GroupSerializer
 
-    def post(self, request, format=None):
-        print(request.data)
-        error=[]
-        if len(request.data) is 0:
-            return Response({"error":"body can't be empty"},status=status.HTTP_400_BAD_REQUEST)
+class TodoList(generics.ListCreateAPIView):
+    queryset = Todo.objects.all()
+    serializer_class = TodoSerializer
+    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
 
-        serializer = TodoSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data,status=status.HTTP_201_CREATED)
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
 
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-class TodoDetail(APIView):
-    """
-    Retrieve, update or delete a snippet instance.
-    """
-    def get(self,request , pk,format=None):
-        todo=self.get_object(pk)
-        serializer= TodoSerializer(todo)
-        return Response(serializer.data)
-
-    def get_object(self,pk):
-        try:
-            return Todo.objects.get(pk=pk)
-        except Todo.DoesNotExist:
-            raise Http404
-
-    def delete(self, request, pk, format=None):
-        todo = self.get_object(pk)
-        todo.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-    def put(self, request, pk, format=None):
-        todo = self.get_object(pk)
-        serializer = TodoSerializer(todo, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+class TodoDetail(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Todo.objects.all()
+    serializer_class = TodoSerializer
+    permission_classes = (permissions.IsAuthenticatedOrReadOnly,IsOwnerOrReadOnly,)
